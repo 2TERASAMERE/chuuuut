@@ -1,0 +1,847 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Chut y'a Laurence</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+  :root{
+    --wall: #E9E3D3;
+    --floor: #CDBFA9;
+    --floor-line: #B9AA92;
+    --desk: #F4EFE3;
+    --desk-edge: #DCD3BE;
+    --ink: #2C2620;
+    --ink-soft: #6B6255;
+    --accent: #3E6259;
+    --accent-dark: #2C4A42;
+    --alert: #C1443C;
+    --alert-dark: #922F29;
+    --warn: #D98B3F;
+    --calm: #6E8F7C;
+    --paper: #FFFDF7;
+    --shadow: rgba(44,38,32,.18);
+    --door-wood: #8A5A3B;
+    --door-wood-dark: #6B4128;
+  }
+
+  *{ box-sizing: border-box; }
+
+  html, body{
+    margin:0; padding:0; height:100%;
+    background: var(--wall);
+    color: var(--ink);
+    font-family: 'Baloo 2', ui-rounded, system-ui, sans-serif;
+    overflow: hidden;
+  }
+
+  #app{
+    position: relative;
+    width: 100%;
+    height: 100vh;
+    min-height: 560px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  .screen{
+    width: min(760px, 96vw);
+    height: min(620px, 94vh);
+    background: var(--wall);
+    border-radius: 22px;
+    box-shadow: 0 18px 40px var(--shadow);
+    position: relative;
+    overflow: hidden;
+    display: flex;
+    flex-direction: column;
+  }
+
+  [hidden]{ display: none !important; }
+
+  /* ---------- TITLE SCREEN ---------- */
+  #screen-title{
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    background:
+      radial-gradient(ellipse at 50% -10%, rgba(62,98,89,.14), transparent 60%),
+      var(--wall);
+    padding: 40px 32px;
+  }
+
+  .title-emoji{
+    font-size: 64px;
+    margin-bottom: 6px;
+    display: inline-block;
+    animation: shush-bob 2.6s ease-in-out infinite;
+  }
+  @keyframes shush-bob{
+    0%,100%{ transform: rotate(-4deg) translateY(0); }
+    50%{ transform: rotate(4deg) translateY(-6px); }
+  }
+
+  h1.game-title{
+    font-family: 'Baloo 2', sans-serif;
+    font-weight: 800;
+    font-size: 44px;
+    margin: 4px 0 6px;
+    color: var(--accent-dark);
+    letter-spacing: .5px;
+  }
+  h1.game-title span{ color: var(--alert); }
+
+  .subtitle{
+    font-size: 17px;
+    color: var(--ink-soft);
+    max-width: 420px;
+    margin: 0 auto 26px;
+    line-height: 1.5;
+  }
+
+  .rules{
+    text-align: left;
+    background: var(--paper);
+    border: 1px solid var(--desk-edge);
+    border-radius: 14px;
+    padding: 16px 20px;
+    max-width: 400px;
+    margin: 0 auto 26px;
+    font-size: 15px;
+    color: var(--ink);
+    line-height: 1.65;
+  }
+  .rules b{ color: var(--accent-dark); }
+
+  button.primary{
+    font-family: inherit;
+    font-weight: 700;
+    font-size: 19px;
+    color: #fff;
+    background: var(--accent);
+    border: none;
+    padding: 14px 40px;
+    border-radius: 999px;
+    cursor: pointer;
+    box-shadow: 0 8px 0 var(--accent-dark);
+    transition: transform .08s ease, box-shadow .08s ease;
+  }
+  button.primary:hover{ transform: translateY(-1px); }
+  button.primary:active{
+    transform: translateY(6px);
+    box-shadow: 0 2px 0 var(--accent-dark);
+  }
+
+  .hint-small{
+    margin-top: 16px;
+    font-size: 13px;
+    color: var(--ink-soft);
+  }
+
+  /* ---------- GAME SCREEN ---------- */
+  #screen-game{
+    padding: 0;
+  }
+
+  .hud{
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    gap: 14px;
+    padding: 14px 20px 10px;
+    background: var(--wall);
+    flex-shrink: 0;
+  }
+
+  .hud-block{
+    font-size: 15px;
+    font-weight: 700;
+    color: var(--ink);
+    display: flex;
+    align-items: center;
+    gap: 6px;
+    white-space: nowrap;
+  }
+  .hud-block .label{
+    font-size: 11px;
+    font-weight: 600;
+    color: var(--ink-soft);
+    display: block;
+  }
+
+  .patience-cups{ letter-spacing: 2px; font-size: 18px; }
+
+  .meter-wrap{
+    padding: 0 20px 12px;
+    flex-shrink: 0;
+  }
+  .meter-track{
+    position: relative;
+    height: 20px;
+    background: var(--desk-edge);
+    border-radius: 999px;
+    overflow: hidden;
+    border: 1px solid rgba(44,38,32,.08);
+  }
+  .meter-fill{
+    height: 100%;
+    width: 0%;
+    background: linear-gradient(90deg, var(--calm), var(--warn) 70%, var(--alert));
+    border-radius: 999px;
+    transition: width .18s ease;
+  }
+  .meter-caption{
+    font-size: 11px;
+    color: var(--ink-soft);
+    margin-top: 4px;
+    text-align: center;
+    font-weight: 600;
+  }
+
+  .office{
+    position: relative;
+    flex: 1;
+    background: var(--floor);
+    background-image:
+      repeating-linear-gradient(0deg, transparent 0 38px, var(--floor-line) 38px 40px),
+      repeating-linear-gradient(90deg, transparent 0 38px, var(--floor-line) 38px 40px);
+    overflow: hidden;
+  }
+
+  /* Laurence's office */
+  .office-door{
+    position: absolute;
+    top: 0; right: 0;
+    width: 150px;
+    height: 100%;
+    background: var(--door-wood);
+    border-left: 6px solid var(--door-wood-dark);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    justify-content: flex-start;
+    padding-top: 14px;
+  }
+  .office-door .plate{
+    background: var(--paper);
+    color: var(--ink);
+    font-size: 12px;
+    font-weight: 700;
+    padding: 4px 10px;
+    border-radius: 6px;
+    box-shadow: 0 2px 4px var(--shadow);
+  }
+  .door-panel{
+    position: absolute;
+    top: 44px;
+    width: 78px;
+    height: calc(100% - 60px);
+    background: var(--door-wood-dark);
+    border-radius: 4px;
+    transform-origin: left center;
+    transition: transform .35s ease;
+    box-shadow: inset 0 0 0 3px rgba(0,0,0,.15);
+  }
+  .door-panel.open{
+    transform: rotateY(72deg);
+  }
+
+  .laurence{
+    position: absolute;
+    bottom: 14px;
+    right: 24px;
+    font-size: 46px;
+    opacity: 0;
+    transform: translateX(30px) scale(.7);
+    transition: opacity .3s ease, transform .3s ease;
+    z-index: 5;
+  }
+  .laurence.visible{
+    opacity: 1;
+    transform: translateX(0) scale(1);
+    animation: laurence-shake .5s ease-in-out .3s 2;
+  }
+  @keyframes laurence-shake{
+    0%,100%{ transform: translateX(0) rotate(0); }
+    25%{ transform: translateX(-3px) rotate(-3deg); }
+    75%{ transform: translateX(3px) rotate(3deg); }
+  }
+
+  .speech-bubble{
+    position: absolute;
+    bottom: 66px;
+    right: 10px;
+    max-width: 190px;
+    background: var(--paper);
+    border: 2px solid var(--alert);
+    border-radius: 12px;
+    padding: 8px 12px;
+    font-size: 12.5px;
+    font-weight: 700;
+    color: var(--alert-dark);
+    line-height: 1.35;
+    opacity: 0;
+    transform: translateY(6px) scale(.9);
+    transition: opacity .25s ease, transform .25s ease;
+    z-index: 6;
+  }
+  .speech-bubble.visible{
+    opacity: 1;
+    transform: translateY(0) scale(1);
+  }
+  .speech-bubble::after{
+    content: "";
+    position: absolute;
+    bottom: -9px;
+    right: 26px;
+    border: 6px solid transparent;
+    border-top-color: var(--alert);
+  }
+
+  .flash-overlay{
+    position: absolute;
+    inset: 0;
+    background: var(--alert);
+    opacity: 0;
+    pointer-events: none;
+    z-index: 10;
+    transition: opacity .12s ease;
+  }
+  .flash-overlay.on{ opacity: .28; }
+
+  .desks-grid{
+    position: absolute;
+    top: 26px;
+    left: 26px;
+    right: 176px;
+    bottom: 26px;
+    display: grid;
+    grid-template-columns: repeat(3, 1fr);
+    grid-template-rows: repeat(2, 1fr);
+    gap: 18px;
+  }
+
+  .desk{
+    position: relative;
+    background: var(--desk);
+    border: 2px solid var(--desk-edge);
+    border-radius: 14px;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    user-select: none;
+    transition: transform .1s ease, box-shadow .15s ease, border-color .15s ease;
+    box-shadow: 0 3px 0 var(--desk-edge);
+  }
+  .desk:active{ transform: translateY(2px); }
+
+  .desk .avatar{
+    font-size: 34px;
+    transition: transform .15s ease;
+  }
+
+  .desk.noisy{
+    border-color: var(--warn);
+    box-shadow: 0 3px 0 var(--warn), 0 0 0 4px rgba(217,139,63,.18);
+  }
+  .desk.noisy .avatar{
+    animation: wobble .35s ease-in-out infinite;
+  }
+  @keyframes wobble{
+    0%,100%{ transform: rotate(-6deg); }
+    50%{ transform: rotate(6deg); }
+  }
+
+  .desk.critical{
+    border-color: var(--alert);
+    box-shadow: 0 3px 0 var(--alert), 0 0 0 6px rgba(193,68,60,.2);
+  }
+
+  .noise-icon{
+    position: absolute;
+    top: -10px;
+    right: -6px;
+    font-size: 20px;
+    filter: drop-shadow(0 2px 1px rgba(0,0,0,.15));
+    animation: pop-in .18s ease;
+  }
+  @keyframes pop-in{
+    from{ transform: scale(0); }
+    to{ transform: scale(1); }
+  }
+
+  .shush-fx{
+    position: absolute;
+    font-size: 22px;
+    font-weight: 800;
+    color: var(--accent-dark);
+    pointer-events: none;
+    animation: float-up .6s ease forwards;
+    z-index: 8;
+  }
+  @keyframes float-up{
+    from{ opacity: 1; transform: translateY(0) scale(1); }
+    to{ opacity: 0; transform: translateY(-38px) scale(1.15); }
+  }
+
+  .combo-tag{
+    position: absolute;
+    top: -6px;
+    left: 50%;
+    transform: translate(-50%, -100%);
+    font-size: 11px;
+    font-weight: 800;
+    color: var(--alert);
+    white-space: nowrap;
+  }
+
+  /* ---------- GAME OVER SCREEN ---------- */
+  #screen-gameover{
+    align-items: center;
+    justify-content: center;
+    text-align: center;
+    padding: 40px 32px;
+  }
+  .go-emoji{ font-size: 54px; margin-bottom: 6px; }
+  .go-title{
+    font-size: 30px;
+    font-weight: 800;
+    color: var(--alert-dark);
+    margin: 4px 0 14px;
+  }
+  .go-line{
+    background: var(--paper);
+    border: 1px solid var(--desk-edge);
+    border-radius: 14px;
+    padding: 16px 26px;
+    margin: 0 auto 22px;
+    max-width: 340px;
+  }
+  .go-line .go-quote{
+    font-size: 14px;
+    color: var(--ink-soft);
+    font-style: italic;
+    margin-bottom: 10px;
+  }
+  .go-stats{
+    display: flex;
+    justify-content: space-around;
+    gap: 18px;
+  }
+  .go-stat b{
+    display: block;
+    font-size: 26px;
+    color: var(--accent-dark);
+  }
+  .go-stat span{
+    font-size: 12px;
+    color: var(--ink-soft);
+    font-weight: 600;
+  }
+
+  @media (max-width: 480px){
+    h1.game-title{ font-size: 32px; }
+    .desks-grid{ right: 130px; }
+    .office-door{ width: 110px; }
+    .laurence{ font-size: 36px; right: 12px; }
+    .speech-bubble{ max-width: 140px; font-size: 11px; }
+  }
+</style>
+</head>
+<body>
+
+<div id="app">
+
+  <!-- ===== TITLE SCREEN ===== -->
+  <div class="screen" id="screen-title">
+    <div class="title-emoji">🤫</div>
+    <h1 class="game-title">Chut y'a <span>Laurence</span></h1>
+    <p class="subtitle">L'openspace est bruyant. Laurence, elle, ne l'est pas — et ça se sent.</p>
+    <div class="rules">
+      <b>Le but :</b> clique sur les collègues bruyants avant que le niveau sonore n'explose.<br><br>
+      <b>Le danger :</b> si la jauge déborde, la porte s'ouvre et Laurence sort demander de <i>« parler moins fort »</i>.<br><br>
+      <b>Tu perds</b> après 3 sorties de Laurence. Combien de temps peux-tu tenir ?
+    </div>
+    <button class="primary" id="btn-start">Jouer</button>
+    <div class="hint-small">Clique sur les bureaux dès qu'une icône de bruit apparaît 🗯️</div>
+  </div>
+
+  <!-- ===== GAME SCREEN ===== -->
+  <div class="screen" id="screen-game" hidden>
+    <div class="hud">
+      <div class="hud-block">
+        <div><span class="label">SCORE</span><span id="hud-score">0</span></div>
+      </div>
+      <div class="hud-block">
+        <div><span class="label">TEMPS</span><span id="hud-time">0:00</span></div>
+      </div>
+      <div class="hud-block">
+        <div><span class="label">PATIENCE DE LAURENCE</span><span class="patience-cups" id="hud-lives">☕☕☕</span></div>
+      </div>
+    </div>
+
+    <div class="meter-wrap">
+      <div class="meter-track">
+        <div class="meter-fill" id="meter-fill"></div>
+      </div>
+      <div class="meter-caption" id="meter-caption">Niveau sonore de l'openspace</div>
+    </div>
+
+    <div class="office" id="office">
+      <div class="desks-grid" id="desks-grid"><!-- desks injected by JS --></div>
+
+      <div class="office-door">
+        <div class="plate">LAURENCE</div>
+        <div class="door-panel" id="door-panel"></div>
+      </div>
+
+      <div class="speech-bubble" id="speech-bubble"></div>
+      <div class="laurence" id="laurence">😠</div>
+
+      <div class="flash-overlay" id="flash-overlay"></div>
+    </div>
+  </div>
+
+  <!-- ===== GAME OVER SCREEN ===== -->
+  <div class="screen" id="screen-gameover" hidden>
+    <div class="go-emoji">🚪😤</div>
+    <div class="go-title">Laurence a fini par vous entendre...</div>
+    <div class="go-line">
+      <div class="go-quote" id="go-quote">« Est-ce que c'est possible de parler moins fort ? »</div>
+      <div class="go-stats">
+        <div class="go-stat"><b id="go-score">0</b><span>points</span></div>
+        <div class="go-stat"><b id="go-time">0:00</b><span>survie</span></div>
+      </div>
+    </div>
+    <button class="primary" id="btn-restart">Rejouer</button>
+  </div>
+
+</div>
+
+<script>
+(function(){
+  "use strict";
+
+  // ---------- Config ----------
+  const AVATARS = ["😀","😎","🤓","🥳","🧑‍💻","👩‍💻","🤠","🧑‍🎨","😴"];
+  const NOISE_ICONS = ["💬","😂","📞","⌨️","🎵","📣"];
+  const NB_DESKS = 6;
+  const MAX_LIVES = 3;
+
+  const LAURENCE_QUOTES = [
+    "Est-ce que c'est possible de parler moins fort ?",
+    "Il y a des gens qui essaient de se concentrer, hein.",
+    "Je vous entends depuis mon bureau, c'est pour dire.",
+    "Ce n'est pas un plateau télé, c'est un openspace.",
+    "On dirait une cour de récré ici.",
+    "Je vais devoir remettre l'affiche « silence » au mur.",
+    "Je ne dis pas ça pour vous embêter... mais un peu quand même.",
+    "Il va falloir qu'on en parle en réunion, à ce niveau là.",
+    "Je crois que j'ai perdu deux neurones à cause du bruit.",
+    "Sérieusement, un peu de calme, ce serait bien."
+  ];
+
+  // ---------- State ----------
+  let state = {
+    score: 0,
+    lives: MAX_LIVES,
+    noise: 0,
+    running: false,
+    startTime: 0,
+    elapsed: 0,
+    spawnDelay: 1600,
+    noiseGainPerTick: 6,
+    combo: 0,
+    lastShushTime: 0,
+    laurenceBusy: false
+  };
+
+  let desks = []; // {el, avatarEl, noisy, noiseTimer, iconEl}
+  let loopHandle = null;
+  let spawnHandle = null;
+  let timerHandle = null;
+
+  // ---------- DOM refs ----------
+  const screenTitle = document.getElementById("screen-title");
+  const screenGame = document.getElementById("screen-game");
+  const screenOver = document.getElementById("screen-gameover");
+
+  const desksGrid = document.getElementById("desks-grid");
+  const meterFill = document.getElementById("meter-fill");
+  const meterCaption = document.getElementById("meter-caption");
+  const hudScore = document.getElementById("hud-score");
+  const hudTime = document.getElementById("hud-time");
+  const hudLives = document.getElementById("hud-lives");
+  const doorPanel = document.getElementById("door-panel");
+  const laurenceEl = document.getElementById("laurence");
+  const speechBubble = document.getElementById("speech-bubble");
+  const flashOverlay = document.getElementById("flash-overlay");
+  const office = document.getElementById("office");
+
+  const goQuote = document.getElementById("go-quote");
+  const goScore = document.getElementById("go-score");
+  const goTime = document.getElementById("go-time");
+
+  // ---------- Helpers ----------
+  function rand(min, max){ return Math.random() * (max - min) + min; }
+  function pick(arr){ return arr[Math.floor(Math.random() * arr.length)]; }
+  function fmtTime(sec){
+    const m = Math.floor(sec / 60);
+    const s = Math.floor(sec % 60);
+    return m + ":" + (s < 10 ? "0" : "") + s;
+  }
+
+  // ---------- Build desks ----------
+  function buildDesks(){
+    desksGrid.innerHTML = "";
+    desks = [];
+    const shuffledAvatars = AVATARS.slice().sort(() => Math.random() - .5);
+    for(let i = 0; i < NB_DESKS; i++){
+      const el = document.createElement("div");
+      el.className = "desk";
+      const avatarEl = document.createElement("div");
+      avatarEl.className = "avatar";
+      avatarEl.textContent = shuffledAvatars[i % shuffledAvatars.length];
+      el.appendChild(avatarEl);
+
+      const desk = { el, avatarEl, noisy: false, noiseAge: 0, iconEl: null };
+      el.addEventListener("click", () => shushDesk(desk));
+      desksGrid.appendChild(el);
+      desks.push(desk);
+    }
+  }
+
+  // ---------- Noise spawning ----------
+  function spawnNoiseOnRandomDesk(){
+    if(!state.running || state.laurenceBusy) return;
+    const idle = desks.filter(d => !d.noisy);
+    if(idle.length === 0) return;
+    const desk = pick(idle);
+    makeNoisy(desk);
+  }
+
+  function makeNoisy(desk){
+    desk.noisy = true;
+    desk.noiseAge = 0;
+    desk.el.classList.add("noisy");
+    const icon = document.createElement("div");
+    icon.className = "noise-icon";
+    icon.textContent = pick(NOISE_ICONS);
+    desk.el.appendChild(icon);
+    desk.iconEl = icon;
+  }
+
+  function calmDesk(desk){
+    desk.noisy = false;
+    desk.noiseAge = 0;
+    desk.el.classList.remove("noisy", "critical");
+    if(desk.iconEl){ desk.iconEl.remove(); desk.iconEl = null; }
+  }
+
+  function shushDesk(desk){
+    if(!state.running || !desk.noisy) return;
+
+    const now = performance.now();
+    const comboWindow = 1400;
+    if(now - state.lastShushTime < comboWindow){
+      state.combo++;
+    } else {
+      state.combo = 1;
+    }
+    state.lastShushTime = now;
+
+    const basePoints = 10;
+    const comboBonus = Math.min(state.combo - 1, 6) * 4;
+    const points = basePoints + comboBonus;
+    state.score += points;
+    state.noise = Math.max(0, state.noise - rand(9, 14));
+
+    spawnShushFx(desk, points);
+    calmDesk(desk);
+    updateHud();
+  }
+
+  function spawnShushFx(desk, points){
+    const fx = document.createElement("div");
+    fx.className = "shush-fx";
+    fx.textContent = "chut ! +" + points;
+    const rect = desk.el.getBoundingClientRect();
+    const officeRect = office.getBoundingClientRect();
+    fx.style.left = (rect.left - officeRect.left + rect.width/2 - 30) + "px";
+    fx.style.top = (rect.top - officeRect.top + 6) + "px";
+    office.appendChild(fx);
+    setTimeout(() => fx.remove(), 650);
+
+    if(state.combo > 1){
+      const combo = document.createElement("div");
+      combo.className = "combo-tag";
+      combo.textContent = "combo x" + state.combo;
+      desk.el.appendChild(combo);
+      setTimeout(() => combo.remove(), 500);
+    }
+  }
+
+  // ---------- Main loop ----------
+  function tick(){
+    if(!state.running) return;
+
+    // noisy desks that aren't shushed in time keep raising the meter,
+    // and eventually the noise icon looks "angrier"
+    let activeNoisy = 0;
+    desks.forEach(desk => {
+      if(desk.noisy){
+        activeNoisy++;
+        desk.noiseAge += 1;
+        if(desk.noiseAge > 55 && !desk.el.classList.contains("critical")){
+          desk.el.classList.add("critical");
+        }
+      }
+    });
+
+    if(!state.laurenceBusy){
+      state.noise += activeNoisy * state.noiseGainPerTick * 0.12;
+      state.noise = Math.min(100, state.noise);
+    }
+
+    if(state.combo > 0 && performance.now() - state.lastShushTime > 1500){
+      state.combo = 0;
+    }
+
+    updateMeter();
+
+    if(state.noise >= 100 && !state.laurenceBusy){
+      triggerLaurence();
+    }
+  }
+
+  function updateMeter(){
+    meterFill.style.width = state.noise + "%";
+    if(state.noise > 80){
+      meterCaption.textContent = "Laurence commence à se lever de sa chaise...";
+    } else if(state.noise > 45){
+      meterCaption.textContent = "Ça monte, ça monte...";
+    } else {
+      meterCaption.textContent = "Niveau sonore de l'openspace";
+    }
+  }
+
+  function updateHud(){
+    hudScore.textContent = state.score;
+    hudTime.textContent = fmtTime(state.elapsed);
+    hudLives.textContent = "☕".repeat(state.lives) + "▫️".repeat(MAX_LIVES - state.lives);
+  }
+
+  // ---------- Laurence event ----------
+  function triggerLaurence(){
+    state.laurenceBusy = true;
+    state.lives -= 1;
+    updateHud();
+
+    flashOverlay.classList.add("on");
+    setTimeout(() => flashOverlay.classList.remove("on"), 140);
+
+    doorPanel.classList.add("open");
+
+    setTimeout(() => {
+      laurenceEl.classList.add("visible");
+      const quote = pick(LAURENCE_QUOTES);
+      speechBubble.textContent = "« " + quote + " »";
+      speechBubble.classList.add("visible");
+    }, 260);
+
+    // freeze noisy desks growth while she's out, give player a breather
+    desks.forEach(calmDesk);
+
+    setTimeout(() => {
+      speechBubble.classList.remove("visible");
+      laurenceEl.classList.remove("visible");
+      doorPanel.classList.remove("open");
+
+      if(state.lives <= 0){
+        endGame();
+        return;
+      }
+
+      state.noise = 35;
+      state.spawnDelay = Math.max(650, state.spawnDelay - 130);
+      state.noiseGainPerTick += 0.6;
+      state.laurenceBusy = false;
+      updateMeter();
+    }, 2200);
+  }
+
+  // ---------- Game lifecycle ----------
+  function startGame(){
+    state = {
+      score: 0,
+      lives: MAX_LIVES,
+      noise: 0,
+      running: true,
+      startTime: performance.now(),
+      elapsed: 0,
+      spawnDelay: 1600,
+      noiseGainPerTick: 6,
+      combo: 0,
+      lastShushTime: 0,
+      laurenceBusy: false
+    };
+
+    buildDesks();
+    updateHud();
+    updateMeter();
+    doorPanel.classList.remove("open");
+    laurenceEl.classList.remove("visible");
+    speechBubble.classList.remove("visible");
+
+    screenTitle.hidden = true;
+    screenOver.hidden = true;
+    screenGame.hidden = false;
+
+    clearInterval(loopHandle);
+    clearInterval(spawnHandle);
+    clearInterval(timerHandle);
+
+    loopHandle = setInterval(tick, 100);
+    timerHandle = setInterval(() => {
+      if(!state.running) return;
+      state.elapsed = (performance.now() - state.startTime) / 1000;
+      hudTime.textContent = fmtTime(state.elapsed);
+    }, 250);
+
+    scheduleNextSpawn();
+  }
+
+  function scheduleNextSpawn(){
+    clearTimeout(spawnHandle);
+    spawnHandle = setTimeout(() => {
+      spawnNoiseOnRandomDesk();
+      if(state.running) scheduleNextSpawn();
+    }, state.spawnDelay + rand(-250, 250));
+  }
+
+  function endGame(){
+    state.running = false;
+    clearInterval(loopHandle);
+    clearInterval(timerHandle);
+    clearTimeout(spawnHandle);
+
+    goQuote.textContent = "« " + pick(LAURENCE_QUOTES) + " »";
+    goScore.textContent = state.score;
+    goTime.textContent = fmtTime(state.elapsed);
+
+    screenGame.hidden = true;
+    screenOver.hidden = false;
+  }
+
+  // ---------- Wire up buttons ----------
+  document.getElementById("btn-start").addEventListener("click", startGame);
+  document.getElementById("btn-restart").addEventListener("click", startGame);
+
+})();
+</script>
+
+</body>
+</html>

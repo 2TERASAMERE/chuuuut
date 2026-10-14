@@ -1,0 +1,193 @@
+<!DOCTYPE html>
+<html lang="fr"><head><meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<title>Manager Dodge</title>
+<link href="https://fonts.googleapis.com/css2?family=Baloo+2:wght@500;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#E9E3D3;--card:#FFFDF7;--ink:#2C2620;--soft:#6B6255;--accent:#3E6259;--accent-d:#2C4A42;--alert:#C1443C;--track:#DCD3BE}
+@media (prefers-color-scheme:dark){:root:not([data-theme="light"]){--bg:#1F1C18;--card:#2B2722;--ink:#F1EBDD;--soft:#B3A993;--accent:#6E9C8E;--accent-d:#4F7A6D;--track:#3A352E}}
+*{box-sizing:border-box}[hidden]{display:none!important}
+html,body{margin:0;background:var(--bg);color:var(--ink);font-family:'Baloo 2',ui-rounded,system-ui,sans-serif}
+body{display:grid;place-items:center;min-height:100vh;padding:12px}
+#wrap{width:min(100%,800px)}
+#hud{display:flex;align-items:center;gap:16px;padding:6px 4px 10px;flex-wrap:wrap}
+#hud small{display:block;font-size:11px;font-weight:600;color:var(--soft);line-height:1}
+#hud b{font-size:20px;line-height:1.1}
+.nz{flex:1;min-width:140px}
+.bar{position:relative;height:16px;background:var(--track);border-radius:9px;overflow:hidden;margin-top:3px}
+.bar i{display:block;height:100%;width:0;background:var(--accent);transition:background .15s}
+.bar i.hot{background:var(--alert)}
+.bar u{position:absolute;left:35%;top:0;bottom:0;width:3px;background:var(--ink);opacity:.55}
+button{font:inherit;cursor:pointer}
+#snd{border:0;background:var(--track);color:var(--ink);border-radius:10px;padding:4px 10px;font-size:18px}
+#stage{position:relative;border-radius:18px;overflow:hidden;box-shadow:0 14px 34px rgba(0,0,0,.22)}
+canvas{display:block;width:100%;height:auto;aspect-ratio:5/3;touch-action:none}
+#alert{position:absolute;top:10px;left:50%;transform:translateX(-50%);background:var(--alert);color:#fff;font-weight:800;padding:6px 18px;border-radius:999px;white-space:nowrap;animation:bl .25s infinite alternate}
+@keyframes bl{to{opacity:.5}}
+.ov{position:absolute;inset:0;display:flex;flex-direction:column;align-items:center;justify-content:center;text-align:center;padding:20px;background:color-mix(in srgb,var(--bg) 90%,transparent)}
+.ov h1{margin:0;font-size:clamp(28px,6vw,42px);font-weight:800;color:var(--accent)}.ov h1 span{color:var(--alert)}
+.ov p{margin:6px 0;max-width:460px;font-size:15px;color:var(--soft);line-height:1.4}
+.ov ul{text-align:left;background:var(--card);border-radius:14px;padding:12px 16px 12px 32px;margin:10px 0 16px;max-width:500px;font-size:14px;line-height:1.5}
+.go{font-weight:700;font-size:19px;color:#fff;background:var(--accent);border:0;padding:12px 38px;border-radius:999px;box-shadow:0 6px 0 var(--accent-d)}
+.go:active{transform:translateY(5px);box-shadow:0 1px 0 var(--accent-d)}
+.st{display:flex;gap:28px;margin:12px 0 18px}.st b{display:block;font-size:28px;color:var(--accent)}.st span{font-size:12px;color:var(--soft)}
+</style></head>
+<body>
+<main id="wrap">
+  <header id="hud">
+    <div><small>SCORE</small><b id="sc">0</b></div>
+    <div><small>TEMPS</small><b id="tm">0:00</b></div>
+    <div><small>AVERTISSEMENTS</small><b id="st"></b></div>
+    <div class="nz"><small>TON NIVEAU DE BRUIT</small><div class="bar"><i id="nb"></i><u></u></div></div>
+    <button id="snd" title="Son (M)">🔇</button>
+  </header>
+  <div id="stage">
+    <canvas id="c" width="800" height="480"></canvas>
+    <div id="alert" hidden>🚨 Laurence va sortir ! Calme-toi !</div>
+    <section class="ov" id="title">
+      <h1>🏃 Manager <span>Dodge</span></h1>
+      <p>Fais du bruit, mais jamais devant Laurence.</p>
+      <ul>
+        <li>Va dans les zones <b>☕ 💧 🖨️ 🎂</b> pour papoter : ton bruit monte et plus il est haut, plus tu marques.</li>
+        <li>Quand la porte tremble 🚨, fais retomber ton bruit sous la <b>barre</b> : cours à <b>ton bureau</b>, il te calme 3x plus vite.</li>
+        <li>Bruit trop haut quand Laurence sort = avertissement. 3 avertissements et c'est fini. Évite les collègues qui passent !</li>
+        <li>Déplacement : flèches, ZQSD / WASD, ou clic maintenu. Son : touche M (coupé par défaut, open space oblige).</li>
+      </ul>
+      <button class="go" id="go">Jouer</button>
+    </section>
+    <section class="ov" id="over" hidden>
+      <h1>Laurence en a <span>marre</span></h1>
+      <p id="oq"></p>
+      <div class="st"><div><b id="osc">0</b><span>points</span></div><div><b id="otm">0:00</b><span>survie</span></div><div><b id="obe">0</b><span>record</span></div></div>
+      <button class="go" id="again">Rejouer</button>
+    </section>
+  </div>
+</main>
+<script>
+(()=>{
+const W=800,H=480,TH=35,SP=210,$=i=>document.getElementById(i),cv=$('c'),g=cv.getContext('2d');
+g.textBaseline='middle';
+const EF='34px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif',TF='700 13px "Baloo 2",sans-serif';
+const rnd=(a,b)=>a+Math.random()*(b-a),pick=a=>a[Math.floor(Math.random()*a.length)];
+const fmt=s=>Math.floor(s/60)+':'+String(Math.floor(s%60)).padStart(2,'0');
+const Q=["Est-ce que c'est possible de parler moins fort ?","On dirait une cour de récré ici.","Je vous entends depuis mon bureau.","Ce n'est pas un plateau télé, ici.","Il y en a qui essaient de bosser, hein."];
+// zones de bruit : p = points/s, plus c'est loin du bureau, plus ça rapporte
+const ST=[{e:'☕',n:'Machine à café',x:190,y:350,p:6,r:42},{e:'💧',n:'Fontaine',x:330,y:150,p:9,r:42},{e:'🖨️',n:'Photocopieuse',x:450,y:260,p:13,r:42},{e:'🎂',n:'Anniversaire',x:610,y:400,p:20,r:46}];
+const KM={arrowleft:'l',a:'l',q:'l',arrowright:'r',d:'r',arrowup:'u',w:'u',z:'u',arrowdown:'d',s:'d'};
+let S,p,L,NP,FX,k={},tg=null,snd=false,ac,last=0,run=false,best=0,al=$('alert');
+try{best=+localStorage.getItem('md_best')||0}catch(e){}
+
+function sfx(f,d,t){if(!snd)return;ac=ac||new AudioContext();const o=ac.createOscillator(),v=ac.createGain();o.type=t||'sine';o.frequency.value=f;v.gain.value=.05;o.connect(v);v.connect(ac.destination);o.start();v.gain.exponentialRampToValueAtTime(.001,ac.currentTime+d);o.stop(ac.currentTime+d)}
+function fx(x,y,t,c){FX.push({x,y,t,c,a:1.4})}
+function init(){
+  S={score:0,t:0,n:0,strikes:0,streak:0,exits:0,shake:0};
+  p={x:80,y:415,stun:0,inv:0};
+  L={ph:'idle',t:9,b:0,caught:false,q:''};
+  NP=[{x:100,y:90,v:80},{x:500,y:200,v:-105},{x:300,y:310,v:65},{x:600,y:450,v:-75}];
+  FX=[];al.hidden=true;
+}
+const lvl=()=>S.exits+S.strikes*2;
+
+function upd(dt){
+  S.t+=dt;if(S.shake>0)S.shake-=dt;if(p.inv>0)p.inv-=dt;
+  // déplacement
+  if(p.stun>0)p.stun-=dt;else{
+    let dx=(k.r?1:0)-(k.l?1:0),dy=(k.d?1:0)-(k.u?1:0);
+    if(!dx&&!dy&&tg){const ex=tg.x-p.x,ey=tg.y-p.y,d=Math.hypot(ex,ey);if(d>8){dx=ex/d;dy=ey/d}}
+    if(dx||dy){const m=Math.hypot(dx,dy)||1;p.x+=dx/m*SP*dt;p.y+=dy/m*SP*dt}
+  }
+  p.x=Math.max(16,Math.min(672,p.x));p.y=Math.max(16,Math.min(H-16,p.y));
+  // bruit : monte dans une zone, redescend ailleurs (3x plus vite au bureau)
+  const home=p.x<150&&p.y>360,z=ST.find(s=>Math.hypot(s.x-p.x,s.y-p.y)<s.r);
+  if(z){S.n=Math.min(100,S.n+(25+z.p*1.5)*dt);S.score+=z.p*(1+S.n/50)*dt}
+  else S.n=Math.max(0,S.n-(home?70:20)*dt);
+  // collègues qui passent
+  NP.forEach(o=>{
+    o.x+=o.v*dt;if(o.x>680)o.x=-20;if(o.x<-20)o.x=680;
+    if(p.inv<=0&&Math.hypot(o.x-p.x,o.y-p.y)<28){p.stun=.7;p.inv=1.6;S.n=Math.min(100,S.n+12);fx(p.x,p.y-30,'Aïe !','#C1443C');sfx(120,.15,'sawtooth')}
+  });
+  // Laurence : repos -> avertissement -> sortie
+  if(L.ph=='idle'){L.t-=dt;if(L.t<=0){L.ph='warn';L.t=Math.max(.85,2.3-lvl()*.11);al.hidden=false}}
+  else if(L.ph=='warn'){
+    L.t-=dt;L.b-=dt;if(L.b<=0){sfx(880,.08);L.b=.28}
+    if(L.t<=0){L.ph='out';L.t=1.9;L.caught=false;L.q=pick(Q);al.hidden=true;sfx(200,.2,'square')}
+  }else{
+    L.t-=dt;
+    if(!L.caught&&S.n>TH){
+      L.caught=true;S.strikes++;S.streak=0;p.stun=1.3;S.n=15;S.shake=.5;
+      fx(p.x,p.y-30,'AVERTISSEMENT !','#C1443C');sfx(90,.4,'sawtooth');
+    }
+    if(L.t<=0){
+      if(!L.caught){S.streak++;const b=50+25*(S.streak-1);S.score+=b;fx(p.x,p.y-30,'Esquivé ! +'+b,'#3E6259');sfx(660,.15)}
+      S.exits++;L.ph='idle';L.t=rnd(Math.max(3.5,10-lvl()*.8),Math.max(5,14-lvl()));
+      if(S.strikes>=3)end();
+    }
+  }
+  FX.forEach(f=>{f.a-=dt;f.y-=30*dt});FX=FX.filter(f=>f.a>0);
+}
+
+const wrap=(t,n)=>{const o=[];let l='';t.split(' ').forEach(w=>{if((l+' '+w).trim().length>n){o.push(l);l=w}else l=(l+' '+w).trim()});o.push(l);return o};
+
+function draw(){
+  g.save();if(S.shake>0)g.translate(rnd(-6,6),rnd(-6,6));
+  g.fillStyle='#CDBFA9';g.fillRect(0,0,W,H);
+  g.strokeStyle='#B9AA92';g.lineWidth=2;g.beginPath();
+  for(let x=0;x<=W;x+=40){g.moveTo(x,0);g.lineTo(x,H)}for(let y=0;y<=H;y+=40){g.moveTo(0,y);g.lineTo(W,y)}g.stroke();
+  // bureau de Laurence + porte
+  g.fillStyle='#8A5A3B';g.fillRect(690,0,110,H);g.fillStyle='#6B4128';g.fillRect(684,0,8,H);
+  g.fillStyle='#FFFDF7';g.font=TF;g.textAlign='center';g.fillText('LAURENCE',745,24);
+  const sh=L.ph=='warn'?Math.sin(S.t*70)*3:0;
+  g.fillStyle=L.ph=='out'?'#2A1C12':'#C98E5E';g.fillRect(683+sh,210,10,60);
+  if(L.ph!='out'){g.fillStyle='#F2C94C';g.beginPath();g.arc(688+sh,242,3,0,7);g.fill()}
+  if(L.ph=='warn'){g.font=EF;g.fillText('🚨',745+sh,240)}
+  // bureau du joueur (zone de calme)
+  g.fillStyle='rgba(110,143,124,.2)';g.fillRect(0,360,150,120);
+  g.fillStyle='#F4EFE3';g.strokeStyle='#DCD3BE';g.lineWidth=3;g.fillRect(20,392,110,56);g.strokeRect(20,392,110,56);
+  g.font=EF;g.fillText('🖥️',75,420);g.fillStyle='#2C4A42';g.font=TF;g.fillText('TON BUREAU (calme x3)',75,468);
+  // zones de bruit
+  ST.forEach(s=>{
+    g.fillStyle='rgba(62,98,89,.15)';g.strokeStyle='rgba(62,98,89,.5)';g.lineWidth=2;g.setLineDash([6,5]);
+    g.beginPath();g.arc(s.x,s.y,s.r,0,7);g.fill();g.stroke();g.setLineDash([]);
+    g.font=EF;g.fillText(s.e,s.x,s.y-4);g.fillStyle='#2C4A42';g.font=TF;g.fillText(s.n,s.x,s.y+s.r+10);
+  });
+  NP.forEach(o=>{g.font=EF;g.fillText('🚶',o.x,o.y)});
+  // joueur
+  if(S.n>4){g.strokeStyle=S.n>TH?'rgba(193,68,60,.85)':'rgba(217,139,63,.7)';g.lineWidth=3;g.beginPath();g.arc(p.x,p.y,20+S.n*.3,0,7);g.stroke()}
+  g.font=EF;g.fillText('🧑‍💻',p.x,p.y);if(p.stun>0)g.fillText('💫',p.x,p.y-26);
+  // Laurence sortie + bulle
+  if(L.ph=='out'){
+    g.font='44px "Apple Color Emoji","Segoe UI Emoji","Noto Color Emoji",sans-serif';g.fillText('😠',650,240);
+    const ls=wrap(L.q,24),h=ls.length*18+14,bx=400,by=195-h;
+    g.fillStyle='#FFFDF7';g.strokeStyle='#C1443C';g.lineWidth=2;g.beginPath();g.roundRect(bx,by,240,h,10);g.fill();g.stroke();
+    g.fillStyle='#922F29';g.font='700 14px "Baloo 2",sans-serif';ls.forEach((s,i)=>g.fillText(s,bx+120,by+15+i*18));
+  }
+  FX.forEach(f=>{g.globalAlpha=Math.min(1,f.a);g.fillStyle=f.c;g.font='800 18px "Baloo 2",sans-serif';g.fillText(f.t,f.x,f.y)});g.globalAlpha=1;
+  g.restore();
+}
+
+function hud(){
+  $('sc').textContent=Math.floor(S.score);$('tm').textContent=fmt(S.t);
+  $('st').textContent='⚠️'.repeat(S.strikes)+'▫️'.repeat(3-S.strikes);
+  $('nb').style.width=S.n+'%';$('nb').className=S.n>TH?'hot':'';
+}
+function loop(ts){if(!run)return;const dt=Math.min(.05,(ts-last)/1000||0);last=ts;upd(dt);draw();hud();if(run)requestAnimationFrame(loop)}
+function start(){init();$('title').hidden=true;$('over').hidden=true;run=true;last=performance.now();requestAnimationFrame(loop)}
+function end(){
+  run=false;al.hidden=true;const sc=Math.floor(S.score);
+  if(sc>best){best=sc;try{localStorage.setItem('md_best',best)}catch(e){}}
+  $('osc').textContent=sc;$('otm').textContent=fmt(S.t);$('obe').textContent=best;$('oq').textContent='« '+L.q+' »';$('over').hidden=false;
+}
+function tog(){snd=!snd;$('snd').textContent=snd?'🔊':'🔇'}
+
+// entrées : clavier + clic/doigt maintenu
+addEventListener('keydown',e=>{const c=e.key.toLowerCase(),m=KM[c];if(m){k[m]=1;e.preventDefault()}else if(c=='m')tog()});
+addEventListener('keyup',e=>{const m=KM[e.key.toLowerCase()];if(m)k[m]=0});
+const pt=e=>{const r=cv.getBoundingClientRect();tg={x:(e.clientX-r.left)*W/r.width,y:(e.clientY-r.top)*H/r.height}};
+cv.addEventListener('pointerdown',e=>{pt(e);cv.setPointerCapture(e.pointerId)});
+cv.addEventListener('pointermove',e=>{if(e.buttons)pt(e)});
+['pointerup','pointercancel'].forEach(t=>cv.addEventListener(t,()=>tg=null));
+$('go').onclick=start;$('again').onclick=start;$('snd').onclick=tog;
+init();draw();hud();
+})();
+</script>
+</body></html>
